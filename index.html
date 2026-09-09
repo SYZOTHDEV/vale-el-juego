@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Convención, Murder Mystery & La Venganza de Valentín</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #020204;
+            color: #fff;
+            user-select: none;
+            touch-action: none;
+        }
+
+        /* SELECTOR DE DISPOSITIVO Y MENÚS */
+        .overlay-screen {
+            position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: radial-gradient(circle, #1a0826 0%, #000000 100%);
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            z-index: 100;
+        }
+
+        h1 {
+            font-size: 2.2rem; margin-bottom: 5px; text-align: center;
+            color: #ff2a6d; text-shadow: 0 0 20px rgba(255, 42, 109, 0.8);
+            letter-spacing: 2px; text-transform: uppercase;
+        }
+
+        .cards-container { display: flex; gap: 15px; margin-top: 15px; flex-wrap: wrap; justify-content: center; }
+
+        .card {
+            background: rgba(255, 255, 255, 0.04);
+            border: 2px solid rgba(255, 42, 109, 0.3);
+            border-radius: 15px; padding: 18px; width: 180px;
+            text-align: center; cursor: pointer; transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .card:hover, .card:active {
+            transform: translateY(-5px) scale(1.02);
+            border-color: #05d9e8; box-shadow: 0 0 25px rgba(5, 217, 232, 0.5);
+        }
+
+        /* CONTROLES TÁCTILES MÓVIL */
+        #mobile-controls {
+            position: absolute; bottom: 20px; left: 0; width: 100vw; height: 140px;
+            pointer-events: none; z-index: 50; display: none; justify-content: space-between;
+            padding: 0 25px; box-sizing: border-box;
+        }
+
+        #touch-joystick {
+            width: 110px; height: 110px; background: rgba(255,255,255,0.15);
+            border: 2px solid rgba(255,255,255,0.3); border-radius: 50%;
+            pointer-events: auto; position: relative; touch-action: none;
+        }
+
+        #joystick-stick {
+            width: 45px; height: 45px; background: #05d9e8;
+            border-radius: 50%; position: absolute; top: 32px; left: 32px;
+            box-shadow: 0 0 15px #05d9e8;
+        }
+
+        .mobile-btn {
+            width: 75px; height: 75px; background: rgba(255, 42, 109, 0.7);
+            border: 2px solid #ff2a6d; border-radius: 50%; pointer-events: auto;
+            display: flex; justify-content: center; align-items: center;
+            font-size: 0.9rem; font-weight: bold; color: #fff;
+            box-shadow: 0 0 15px rgba(255, 42, 109, 0.5);
+        }
+
+        /* HUD CONVENCIÓN */
+        #ui-layer {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; display: none; flex-direction: column;
+            justify-content: space-between; padding: 15px; box-sizing: border-box;
+            z-index: 5;
+        }
+
+        .hud-top { display: flex; justify-content: space-between; align-items: flex-start; }
+
+        #fury-container {
+            width: 220px; background: rgba(5, 5, 10, 0.85);
+            border: 2px solid #ff2a6d; border-radius: 10px; padding: 10px;
+            backdrop-filter: blur(8px);
+        }
+
+        #fury-bar-bg { width: 100%; height: 14px; background-color: #111; border-radius: 5px; overflow: hidden; margin-top: 5px; }
+        #fury-bar { width: 0%; height: 100%; background: linear-gradient(90deg, #ffc800, #ff2a6d, #ff0000); transition: width 0.3s ease; }
+
+        #score-board {
+            background: rgba(5, 5, 10, 0.85); padding: 10px 15px;
+            border-radius: 10px; border-right: 4px solid #05d9e8; text-align: right;
+        }
+
+        #car-display-card {
+            position: absolute; top: 80px; right: 15px;
+            width: 220px; background: rgba(10, 10, 18, 0.9);
+            border: 1px solid rgba(255,255,255,0.15); border-radius: 12px;
+            overflow: hidden; backdrop-filter: blur(10px);
+        }
+
+        #car-image { width: 100%; height: 110px; object-fit: cover; display: block; }
+        #car-details { padding: 10px; }
+
+        #car-hint {
+            display: block; margin-top: 4px; font-size: 0.7rem;
+            color: #ffea00; font-style: italic; background: rgba(255,234,0,0.1);
+            padding: 3px 6px; border-radius: 4px; border-left: 3px solid #ffea00;
+        }
+
+        #rating-controls {
+            pointer-events: auto; align-self: center; margin-bottom: 10px;
+            display: flex; gap: 8px; background: rgba(5, 5, 10, 0.9);
+            padding: 10px 18px; border-radius: 30px; border: 1px solid rgba(255, 42, 109, 0.3);
+        }
+
+        .btn-rate {
+            background: #12121a; border: 2px solid #333; color: white;
+            padding: 8px 14px; font-size: 0.8rem; font-weight: bold;
+            border-radius: 20px; cursor: pointer;
+        }
+
+        .btn-bad:hover { background: #ff2a6d; }
+        .btn-med:hover { background: #ffc800; color: #000; }
+        .btn-good:hover { background: #05d9e8; color: #000; }
+
+        /* HUD MURDER MYSTERY & FPS */
+        #role-badge {
+            position: absolute; top: 15px; left: 50%; transform: translateX(-50%);
+            font-size: 1.5rem; font-weight: 900; letter-spacing: 2px;
+            padding: 6px 20px; border-radius: 12px; text-transform: uppercase;
+            text-shadow: 0 0 15px currentColor; display: none; z-index: 10;
+        }
+
+        #fps-hud {
+            position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
+            pointer-events: none; display: none; flex-direction: column;
+            justify-content: space-between; align-items: center; padding: 20px; box-sizing: border-box; z-index: 8;
+        }
+
+        #crosshair {
+            position: absolute; top: 50%; left: 50%; width: 6px; height: 6px;
+            background: rgba(255, 255, 255, 0.8); border-radius: 50%;
+            transform: translate(-50%, -50%); box-shadow: 0 0 8px #fff;
+        }
+
+        #survival-timer {
+            font-size: 2rem; font-weight: bold; color: #ff2a6d;
+            text-shadow: 0 0 15px #ff2a6d; background: rgba(0,0,0,0.8);
+            padding: 6px 20px; border-radius: 10px; border: 2px solid #ff2a6d;
+        }
+
+        #fps-warning, #city-hud, #oscar-mission {
+            font-size: 1.2rem; font-weight: 900; text-align: center;
+            text-shadow: 0 0 15px currentColor; display: none;
+        }
+
+        #hide-prompt {
+            position: absolute; bottom: 80px; font-size: 1.1rem; font-weight: bold;
+            color: #05d9e8; text-shadow: 0 0 10px #05d9e8; display: none;
+            background: rgba(0,0,0,0.7); padding: 6px 14px; border-radius: 6px;
+        }
+
+        #cinematic-subtitle {
+            position: absolute; bottom: 80px; width: 100%; text-align: center;
+            font-size: 2rem; font-weight: 900; color: #ff0055; text-shadow: 0 0 20px #ff0055;
+            display: none; z-index: 15; pointer-events: none;
+        }
+
+        #game-over {
+            position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(10, 0, 0, 0.95); display: none;
+            flex-direction: column; justify-content: center; align-items: center; z-index: 100;
+        }
+
+        .btn-group-end { display: flex; gap: 15px; margin-top: 20px; }
+        .btn-end { padding: 12px 24px; font-size: 1rem; font-weight: bold; color: white; border: none; border-radius: 8px; cursor: pointer; }
+        .btn-restart-style { background: #ff0000; }
+        .btn-gta-style { background: #00ccff; color: #000; }
+    </style>
+</head>
+<body>
+
+    <!-- 1. SELECTOR DE DISPOSITIVO -->
+    <div id="device-select" class="overlay-screen">
+        <h1>DISPOSITIVO DE JUEGO</h1>
+        <div class="cards-container">
+            <div class="card" onclick="setDevice('pc')">
+                <h2 style="color:#05d9e8;">PC / LAPTOP</h2>
+                <p>Teclado (WASD) y Ratón.</p>
+            </div>
+            <div class="card" onclick="setDevice('mobile')">
+                <h2 style="color:#ff2a6d;">MÓVIL / CELULAR</h2>
+                <p>Pantalla táctil con joystick.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. SELECTOR DE MODO -->
+    <div id="character-select" class="overlay-screen" style="display:none;">
+        <h1>MODO Y PERSONAJE</h1>
+        <div class="cards-container">
+            <div class="card" onclick="startGame('Joako', 'classic')">
+                <h2 style="color:#05d9e8;">CONVENCIÓN</h2>
+                <p>Acompaña a <strong>Joako</strong>.</p>
+            </div>
+            <div class="card" onclick="startGame('Philippe', 'classic')">
+                <h2 style="color:#ff2a6d;">CONVENCIÓN</h2>
+                <p>Acompaña a <strong>Philippe</strong>.</p>
+            </div>
+            <div class="card" onclick="startGame('Joako', 'murder')" style="border-color:#ffea00;">
+                <h2 style="color:#ffea00;">MURDER MYSTERY</h2>
+                <p>Cabaña, bosque y roles.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- CONTROLES MÓVIL -->
+    <div id="mobile-controls">
+        <div id="touch-joystick"><div id="joystick-stick"></div></div>
+        <div class="mobile-btn" onclick="triggerMobileAction()">ACCIÓN</div>
+    </div>
+
+    <!-- HUD CONVENCIÓN -->
+    <div id="ui-layer">
+        <div class="hud-top">
+            <div id="fury-container">
+                <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:#ff2a6d; font-weight:bold;">
+                    <span>FURIA VALENTÍN</span>
+                    <span id="fury-percentage">0%</span>
+                </div>
+                <div id="fury-bar-bg"><div id="fury-bar"></div></div>
+            </div>
+
+            <div id="score-board">
+                <div style="font-size: 0.7rem; color: #aaa;">PUNTAJE (META: 1000)</div>
+                <div style="font-size: 1.4rem; font-weight: bold;">
+                    <span id="score-text">0</span>
+                    <span id="multiplier-badge" style="color:#ffcc00; font-size:1rem; margin-left:5px;">x1</span>
+                </div>
+            </div>
+        </div>
+
+        <div id="car-display-card">
+            <img id="car-image" src="" alt="Carro">
+            <div id="car-details">
+                <h3 id="car-name" style="margin:0 0 5px 0; font-size: 1rem; color:#05d9e8;">Cargando...</h3>
+                <span id="car-status" style="font-size: 0.75rem; color: #aaa;">Procesando...</span>
+                <span id="car-hint">Pista: Analizando...</span>
+            </div>
+        </div>
+
+        <div id="rating-controls">
+            <button class="btn-rate btn-bad" onclick="rateCar('Malo')">Horrible</button>
+            <button class="btn-rate btn-med" onclick="rateCar('Normal')">Meh</button>
+            <button class="btn-rate btn-good" onclick="rateCar('Excelente')">Increíble</button>
+        </div>
+    </div>
+
+    <div id="role-badge">ROL</div>
+
+    <!-- HUD FPS -->
+    <div id="fps-hud">
+        <div style="display:flex; flex-direction:column; align-items:center;">
+            <div id="survival-timer">30s</div>
+            <div id="fps-warning" style="color:#ff2a6d;">¡ESCÓNDETE EN LAS CAMAS! [E]</div>
+            <div id="oscar-mission" style="color:#ffea00;">¡MATA AL OSCAR!<br><span style="font-size:1rem; color:#fff;">¡ATRÁPALO!</span></div>
+            <div id="city-hud" style="color:#05d9e8;">MODO CIUDAD GIGANTE<br><span style="font-size:1rem; color:#fff;">Kills: <span id="kill-count" style="color:#ffea00;">0</span>/10</span></div>
+        </div>
+        <div id="crosshair"></div>
+        <div id="hide-prompt">Presiona ACCIÓN para Esconderte</div>
+    </div>
+
+    <div id="cinematic-subtitle">VALENTÍN: "¡TE AMO!"</div>
+
+    <!-- GAME OVER -->
+    <div id="game-over">
+        <h1 id="go-title">¡GAME OVER!</h1>
+        <p id="go-desc" style="font-size: 1.1rem; color: #ccc;">Fuiste eliminado.</p>
+        <p style="font-size: 1rem;">Puntaje: <span id="final-score" style="color:#05d9e8; font-weight:bold;">0</span></p>
+        <div class="btn-group-end">
+            <button class="btn-end btn-restart-style" onclick="location.reload()">Reiniciar</button>
+            <button class="btn-end btn-gta-style" onclick="enterFreeGtaMode()">Modo GTA</button>
+        </div>
+    </div>
+
+    <!-- Three.js Engine -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <script>
+        let isMobile = false;
+        let joyDir = { x: 0, y: 0 };
+
+        function setDevice(device) {
+            isMobile = (device === 'mobile');
+            document.getElementById('device-select').style.display = 'none';
+            document.getElementById('character-select').style.display = 'flex';
+            if (isMobile) {
+                document.getElementById('mobile-controls').style.display = 'flex';
+                setupJoystick();
+            }
+        }
+
+        function setupJoystick() {
+            const joystick = document.getElementById('touch-joystick');
+            const stick = document.getElementById('joystick-stick');
+            let rect = joystick.getBoundingClientRect();
+
+            joystick.addEventListener('touchstart', handleTouch);
+            joystick.addEventListener('touchmove', handleTouch);
+            joystick.addEventListener('touchend', () => {
+                stick.style.top = '32px'; stick.style.left = '32px';
+                joyDir = { x: 0, y: 0 }; moveForward = moveBackward = moveLeft = moveRight = false;
+            });
+
+            function handleTouch(e) {
+                rect = joystick.getBoundingClientRect();
+                const touch = e.touches[0];
+                let x = touch.clientX - rect.left - 55;
+                let y = touch.clientY - rect.top - 55;
+                const dist = Math.hypot(x, y);
+                if (dist > 35) { x = (x / dist) * 35; y = (y / dist) * 35; }
+
+                stick.style.left = (x + 32) + 'px'; stick.style.top = (y + 32) + 'px';
+                joyDir.x = x / 35; joyDir.y = y / 35;
+                moveForward = joyDir.y < -0.3; moveBackward = joyDir.y > 0.3;
+                moveLeft = joyDir.x < -0.3; moveRight = joyDir.x > 0.3;
+            }
+        }
+
+        function triggerMobileAction() {
+            if (isEscapeMode && !isCelebration) {
+                if (isHidden) { isHidden = false; camera.position.y = 1.6; }
+                else if (currentHideableNear) {
+                    isHidden = true;
+                    camera.position.x = currentHideableNear.mesh.position.x;
+                    camera.position.z = currentHideableNear.mesh.position.z;
+                    camera.position.y = 0.5;
+                }
+            } else if (isCityMode) {
+                isDrifting = true; setTimeout(() => isDrifting = false, 800);
+            }
+        }
+
+        const AudioSys = {
+            ctx: null, reggaetonTimer: null, epicMusicTimer: null,
+            init() { this.ctx = new (window.AudioContext || window.webkitAudioContext)(); this.startReggaetonBeat(); },
+            startReggaetonBeat() {
+                let step = 0;
+                this.reggaetonTimer = setInterval(() => {
+                    if (!this.ctx) return; const now = this.ctx.currentTime;
+                    if (step === 0 || step === 3 || step === 4 || step === 7) {
+                        const kick = this.ctx.createOscillator(); const gain = this.ctx.createGain();
+                        kick.frequency.setValueAtTime(130, now); kick.frequency.exponentialRampToValueAtTime(30, now + 0.12);
+                        gain.gain.setValueAtTime(0.4, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
+                        kick.connect(gain); gain.connect(this.ctx.destination); kick.start(now); kick.stop(now + 0.12);
+                    }
+                    step = (step + 1) % 8;
+                }, 120);
+            },
+            stopReggaeton() { if (this.reggaetonTimer) clearInterval(this.reggaetonTimer); },
+            startEpicCityMusic() {
+                this.stopReggaeton(); let noteIdx = 0; const epicNotes = [220, 261.63, 293.66, 329.63, 392.00];
+                this.epicMusicTimer = setInterval(() => {
+                    if (!this.ctx) return; const now = this.ctx.currentTime;
+                    const osc = this.ctx.createOscillator(); const gain = this.ctx.createGain();
+                    osc.type = 'sawtooth'; osc.frequency.setValueAtTime(epicNotes[noteIdx % epicNotes.length], now);
+                    gain.gain.setValueAtTime(0.2, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.18);
+                    osc.connect(gain); gain.connect(this.ctx.destination); osc.start(now); osc.stop(now + 0.18);
+                    noteIdx++;
+                }, 100);
+            },
+            playExplosionSound() {
+                if (!this.ctx) return; const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator(); const gain = this.ctx.createGain();
+                osc.type = 'sawtooth'; osc.frequency.setValueAtTime(100, now); osc.frequency.linearRampToValueAtTime(20, now + 0.8);
+                gain.gain.setValueAtTime(0.5, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.8);
+                osc.connect(gain); gain.connect(this.ctx.destination); osc.start(now); osc.stop(now + 0.8);
+            },
+            playCorrect() {
+                if (!this.ctx) return; const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator(); const gain = this.ctx.createGain();
+                osc.type = 'sine'; osc.frequency.setValueAtTime(140, now); osc.frequency.exponentialRampToValueAtTime(260, now + 0.3);
+                gain.gain.setValueAtTime(0.3, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+                osc.connect(gain); gain.connect(this.ctx.destination); osc.start(now); osc.stop(now + 0.5);
+            },
+            playWrong() {
+                if (!this.ctx) return; const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator(); const gain = this.ctx.createGain();
+                osc.type = 'square'; osc.frequency.setValueAtTime(75, now); osc.frequency.linearRampToValueAtTime(35, now + 0.6);
+                gain.gain.setValueAtTime(0.35, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.6);
+                osc.connect(gain); gain.connect(this.ctx.destination); osc.start(now); osc.stop(now + 0.6);
+            }
+        };
+
+        let scene, camera, renderer;
+        let selectedCharacter = null;
+        let valentinFury = 0, currentCar = null, carSpeed = 0.18, isCarInZone = false, currentCarData = null;
+        let score = 0, multiplier = 1, streak = 0;
+        let valentinGroup, valentinFaceMaterial, faceTextures = {};
+
+        let isEscapeMode = false, survivalTime = 30, survivalInterval = null, valentinMonsterMesh, flashlight = null;
+        let moveForward = false, moveBackward = false, moveLeft = false, moveRight = false, isDrifting = false;
+        let yaw = 0, pitch = 0;
+        let hideables = [], isHidden = false, currentHideableNear = null;
+
+        let isCelebration = false, balloons = [], oscarMesh = null, oscarDoors = [];
+        let isCityMode = false, isCinematicMode = false, playerCarGroup = null, carSpeedDrive = 0, carAngleDrive = 0;
+        let cityPedestrians = [], killsCount = 0, bloodParticles = [], explosionParticles = [];
+
+        let isMurderMode = false, playerRole = 'Inocente', fireflies = [];
+        const npcNames = ["Vale", "Reta", "Oscar", "Philippe", "Seba", "Martin", "Ale", "Benja", "Joako", "Garcia", "Cris", "Cristian", "Pancho", "Tati"];
+
+        const carModels = [
+            { name: "BMW M4 Competition", color: 0x0055ff, valentinTaste: "Excelente", hint: "Pista: Le fascina el rugido BMW.", img: "https://images.unsplash.com/photo-1555215695-3004980ad54e?auto=format&fit=crop&w=600&q=80" },
+            { name: "BMW Serie 3 1998", color: 0x556677, valentinTaste: "Malo", hint: "Pista: Odia lo viejo.", img: "https://images.unsplash.com/photo-1520050206274-a1ae44613e6d?auto=format&fit=crop&w=600&q=80" },
+            { name: "Porsche 911 GT3 RS", color: 0xff3300, valentinTaste: "Excelente", hint: "Pista: Ama los exóticos.", img: "https://images.unsplash.com/photo-1614162692292-7ac56d7f7f1e?auto=format&fit=crop&w=600&q=80" },
+            { name: "Ford Mustang V8", color: 0xccaa00, valentinTaste: "Excelente", hint: "Pista: Los V8 son sus preferidos.", img: "https://images.unsplash.com/photo-1584345604476-8ec5e12e42dd?auto=format&fit=crop&w=600&q=80" }
+        ];
+
+        function createMonkeyFaceTexture(type) {
+            const canvas = document.createElement('canvas'); canvas.width = 256; canvas.height = 256;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#3d2314'; ctx.fillRect(0, 0, 256, 256);
+            ctx.fillStyle = '#b5835c'; ctx.beginPath(); ctx.ellipse(128, 140, 80, 60, 0, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(90, 100, 20, 0, Math.PI * 2); ctx.arc(166, 100, 20, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#000000'; ctx.beginPath(); ctx.arc(90, 100, 8, 0, Math.PI * 2); ctx.arc(166, 100, 8, 0, Math.PI * 2); ctx.fill();
+            ctx.lineWidth = 6; ctx.strokeStyle = '#000000';
+            if (type === 'happy') { ctx.beginPath(); ctx.arc(128, 140, 45, 0.1 * Math.PI, 0.9 * Math.PI); ctx.stroke(); }
+            else if (type === 'angry') { ctx.beginPath(); ctx.arc(128, 180, 40, 1.1 * Math.PI, 1.9 * Math.PI); ctx.stroke(); }
+            return new THREE.CanvasTexture(canvas);
+        }
+
+        function initTextures() {
+            faceTextures.happy = createMonkeyFaceTexture('happy');
+            faceTextures.angry = createMonkeyFaceTexture('angry');
+        }
+
+        function init3D() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x020205); scene.fog = new THREE.FogExp2(0x020205, 0.02);
+
+            camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 4.5, 14); camera.lookAt(0, 1.4, 0);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.shadowMap.enabled = true;
+            document.body.appendChild(renderer.domElement);
+
+            const ambient = new THREE.AmbientLight(0xffffff, 0.2); scene.add(ambient);
+            const spot1 = new THREE.SpotLight(0xff2a6d, 4, 35); spot1.position.set(-8, 12, 0); scene.add(spot1);
+            const spot2 = new THREE.SpotLight(0x05d9e8, 4, 35); spot2.position.set(8, 12, 0); scene.add(spot2);
+
+            const roadMat = new THREE.MeshStandardMaterial({ color: 0x0a0a0f, roughness: 0.3 });
+            const road = new THREE.Mesh(new THREE.PlaneGeometry(12, 100), roadMat);
+            road.rotation.x = -Math.PI / 2; road.position.z = -20; scene.add(road);
+
+            window.addEventListener('resize', onWindowResize);
+        }
+
+        function createHumanoid(height, color, skinColor = 0xffdbac, isValentin = false, isRubio = false, nameText = "") {
+            const group = new THREE.Group();
+            const bodyMat = new THREE.MeshStandardMaterial({ color: color, roughness: 0.4 });
+            const skinMat = new THREE.MeshStandardMaterial({ color: skinColor, roughness: 0.6 });
+
+            const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.35 * (height/2), 0.28 * (height/2), 0.95 * (height/2), 8), bodyMat);
+            torso.position.y = (height / 2) + 0.3; group.add(torso);
+
+            let headMaterials;
+            if (isValentin) {
+                valentinFaceMaterial = new THREE.MeshStandardMaterial({ map: faceTextures.happy });
+                headMaterials = [skinMat, skinMat, skinMat, skinMat, valentinFaceMaterial, skinMat];
+            } else headMaterials = skinMat;
+
+            const head = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.42, 0.4), headMaterials);
+            head.position.y = torso.position.y + (0.4 * (height/2)) + 0.2; group.add(head);
+
+            if (isRubio) {
+                const hair = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.15, 0.44), new THREE.MeshStandardMaterial({ color: 0xffea00 }));
+                hair.position.y = head.position.y + 0.2; group.add(hair);
+            }
+
+            const legLeft = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.08, height / 2, 8), bodyMat);
+            legLeft.position.set(-0.16, (height / 4), 0); group.add(legLeft);
+            const legRight = legLeft.clone(); legRight.position.x = 0.16; group.add(legRight);
+
+            if (nameText !== "") {
+                const canvas = document.createElement('canvas'); canvas.width = 128; canvas.height = 32;
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(0,0,128,32);
+                ctx.fillStyle = '#ffffff'; ctx.font = '16px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(nameText, 64, 22);
+                const label = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 0.3), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(canvas), transparent: true }));
+                label.position.y = head.position.y + 0.5; group.add(label);
+            }
+
+            return group;
+        }
+
+        function setupCharacters() {
+            const playerMesh = createHumanoid((selectedCharacter === 'Joako') ? 2.3 : 1.7, (selectedCharacter === 'Joako') ? 0x05d9e8 : 0x22cc44);
+            playerMesh.position.set(-7, 0, 1); scene.add(playerMesh);
+
+            valentinGroup = createHumanoid(2.5, 0x111111, 0x3d2314, true);
+            valentinGroup.scale.set(1.35, 1.0, 1.35); valentinGroup.position.set(-9, 0, -1); scene.add(valentinGroup);
+        }
+
+        function spawnCar() {
+            if (currentCar) scene.remove(currentCar);
+            currentCarData = carModels[Math.floor(Math.random() * carModels.length)];
+
+            const carGroup = new THREE.Group();
+            const body = new THREE.Mesh(new THREE.BoxGeometry(2.3, 0.8, 4.6), new THREE.MeshStandardMaterial({ color: currentCarData.color, metalness: 0.9, roughness: 0.1 }));
+            body.position.y = 0.6; carGroup.add(body);
+
+            carGroup.position.set(0, 0, -35); scene.add(carGroup);
+            currentCar = carGroup; isCarInZone = true;
+
+            document.getElementById('car-name').innerText = currentCarData.name;
+            document.getElementById('car-image').src = currentCarData.img;
+            document.getElementById('car-status').innerText = "Aproximándose...";
+            document.getElementById('car-hint').innerText = currentCarData.hint;
+        }
+
+        function rateCar(playerOpinion) {
+            if (!isCarInZone || !currentCarData) return;
+
+            if (playerOpinion === currentCarData.valentinTaste) {
+                streak++; if (streak % 2 === 0 && multiplier < 8) multiplier *= 2;
+                score += 100 * multiplier;
+                document.getElementById('score-text').innerText = score;
+                document.getElementById('multiplier-badge').innerText = 'x' + multiplier;
+
+                if (score >= 1000) { triggerHappyEndingCity(); return; }
+
+                AudioSys.playCorrect(); valentinFaceMaterial.map = faceTextures.happy;
+                document.getElementById('car-status').innerText = "¡A Valentín le ENCANTÓ!";
+            } else {
+                streak = 0; multiplier = 1;
+                document.getElementById('multiplier-badge').innerText = 'x1';
+                valentinFury += 34; if (valentinFury > 100) valentinFury = 100;
+
+                document.getElementById('fury-bar').style.width = valentinFury + '%';
+                document.getElementById('fury-percentage').innerText = valentinFury + '%';
+
+                AudioSys.playWrong(); valentinFaceMaterial.map = faceTextures.angry;
+                document.getElementById('car-status').innerText = "*GRRR* ¡Valentín enfureció!";
+
+                if (valentinFury >= 100) { startNightTerrorMode(); return; }
+            }
+
+            valentinFaceMaterial.needsUpdate = true; isCarInZone = false;
+        }
+
+        function startMurderMysteryMode() {
+            isMurderMode = true;
+            document.getElementById('ui-layer').style.display = 'none';
+            document.getElementById('fps-hud').style.display = 'flex';
+            document.getElementById('survival-timer').style.display = 'none';
+
+            const roles = ['Inocente', 'Murder', 'Sheriff'];
+            playerRole = roles[Math.floor(Math.random() * roles.length)];
+            const badge = document.getElementById('role-badge');
+            badge.innerText = "TU ROL: " + playerRole; badge.style.display = 'block';
+
+            while(scene.children.length > 0){ scene.remove(scene.children[0]); }
+
+            scene.background = new THREE.Color(0x02050a); scene.fog = new THREE.FogExp2(0x02050a, 0.015);
+            const forestFloor = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), new THREE.MeshStandardMaterial({ color: 0x0a1a0a }));
+            forestFloor.rotation.x = -Math.PI / 2; scene.add(forestFloor);
+
+            // Cabaña 2 pisos
+            const cabinFloor1 = new THREE.Mesh(new THREE.BoxGeometry(20, 0.4, 20), new THREE.MeshStandardMaterial({ color: 0x5a3a1f }));
+            cabinFloor1.position.set(0, 0.2, 0); scene.add(cabinFloor1);
+
+            npcNames.forEach((name) => {
+                const npc = createHumanoid(1.8, Math.random() * 0xffffff, 0xffdbac, false, name === "Oscar" || name === "Seba", name);
+                npc.position.set((Math.random() - 0.5) * 16, 0.4, (Math.random() - 0.5) * 16);
+                scene.add(npc);
+            });
+
+            camera.position.set(0, 1.8, 12);
+            setupControls();
+        }
+
+        function triggerHappyEndingCity() {
+            isCityMode = true;
+            document.getElementById('ui-layer').style.display = 'none';
+            document.getElementById('fps-hud').style.display = 'flex';
+            document.getElementById('survival-timer').style.display = 'none';
+            document.getElementById('city-hud').style.display = 'block';
+
+            AudioSys.startEpicCityMusic();
+            while(scene.children.length > 0){ scene.remove(scene.children[0]); }
+
+            scene.fog = new THREE.FogExp2(0x0a0a20, 0.008); scene.background = new THREE.Color(0x0a0a20);
+            const cityRoad = new THREE.Mesh(new THREE.PlaneGeometry(300, 300), new THREE.MeshStandardMaterial({ color: 0x111118 }));
+            cityRoad.rotation.x = -Math.PI / 2; scene.add(cityRoad);
+
+            playerCarGroup = new THREE.Group();
+            const carBody = new THREE.Mesh(new THREE.BoxGeometry(2.6, 1.0, 5.0), new THREE.MeshStandardMaterial({ color: 0x0055ff }));
+            carBody.position.y = 0.5; playerCarGroup.add(carBody);
+            playerCarGroup.position.set(0, 0, 0); scene.add(playerCarGroup);
+
+            camera.position.set(0, 22, 14); camera.lookAt(0, 0, 0);
+
+            cityPedestrians = [];
+            for (let i = 0; i < 40; i++) {
+                const rubio = createHumanoid(1.8, 0xffea00, 0xffdbac, false, true);
+                rubio.position.set((Math.random() - 0.5) * 180, 0, (Math.random() - 0.5) * 180);
+                scene.add(rubio); cityPedestrians.push(rubio);
+            }
+
+            setupControls();
+        }
+
+        function startSofaCinematic() {
+            isCityMode = false; isCinematicMode = true;
+            document.getElementById('fps-hud').style.display = 'none';
+            document.getElementById('cinematic-subtitle').style.display = 'block';
+
+            while(scene.children.length > 0){ scene.remove(scene.children[0]); }
+            scene.background = new THREE.Color(0x050208);
+
+            const sofa = new THREE.Mesh(new THREE.BoxGeometry(4.5, 1.2, 1.8), new THREE.MeshStandardMaterial({ color: 0x881111 }));
+            sofa.position.set(0, 0.6, 0); scene.add(sofa);
+
+            const sofaValentin = createHumanoid(2.5, 0x111111, 0x3d2314, true); sofaValentin.position.set(0, 0.6, 0.1); scene.add(sofaValentin);
+            camera.position.set(0, 2.2, 4.5); camera.lookAt(0, 1.5, 0);
+
+            setTimeout(() => {
+                sofaValentin.visible = false;
+                AudioSys.playExplosionSound();
+                document.getElementById('cinematic-subtitle').innerText = "¡VALENTÍN EXPLOTÓ!";
+            }, 3000);
+
+            setTimeout(() => {
+                document.getElementById('cinematic-subtitle').style.display = 'none';
+                document.getElementById('go-title').innerText = "¡COMPLETADO!";
+                document.getElementById('game-over').style.display = 'flex';
+            }, 5000);
+        }
+
+        function enterFreeGtaMode() {
+            document.getElementById('game-over').style.display = 'none';
+            triggerHappyEndingCity();
+        }
+
+        function startNightTerrorMode() {
+            isEscapeMode = true;
+            document.getElementById('ui-layer').style.display = 'none';
+            document.getElementById('fps-hud').style.display = 'flex';
+
+            AudioSys.stopReggaeton();
+            while(scene.children.length > 0){ scene.remove(scene.children[0]); }
+
+            scene.background = new THREE.Color(0x000000); scene.fog = new THREE.FogExp2(0x000000, 0.22);
+            flashlight = new THREE.SpotLight(0xffffff, 4, 18, Math.PI / 7, 0.4);
+            camera.add(flashlight); flashlight.position.set(0, 0, 0.5); flashlight.target = camera; scene.add(camera);
+
+            const floor = new THREE.Mesh(new THREE.PlaneGeometry(36, 36), new THREE.MeshStandardMaterial({ color: 0x08080d }));
+            floor.rotation.x = -Math.PI / 2; scene.add(floor);
+
+            valentinMonsterMesh = createHumanoid(2.8, 0x050505, 0x1a0d00, true);
+            valentinMonsterMesh.position.set(0, 0, -12); scene.add(valentinMonsterMesh);
+
+            survivalTime = 30;
+            survivalInterval = setInterval(() => {
+                survivalTime--;
+                document.getElementById('survival-timer').innerText = survivalTime + 's';
+                if (survivalTime <= 0) { clearInterval(survivalInterval); triggerHappyEndingCity(); }
+            }, 1000);
+
+            setupControls();
+        }
+
+        function setupControls() {
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'w' || e.key === 'W') moveForward = true;
+                if (e.key === 's' || e.key === 'S') moveBackward = true;
+                if (e.key === 'a' || e.key === 'A') moveLeft = true;
+                if (e.key === 'd' || e.key === 'D') moveRight = true;
+                if (e.code === 'Space') isDrifting = true;
+            });
+
+            document.addEventListener('keyup', (e) => {
+                if (e.key === 'w' || e.key === 'W') moveForward = false;
+                if (e.key === 's' || e.key === 'S') moveBackward = false;
+                if (e.key === 'a' || e.key === 'A') moveLeft = false;
+                if (e.key === 'd' || e.key === 'D') moveRight = false;
+                if (e.code === 'Space') isDrifting = false;
+            });
+
+            window.addEventListener('click', () => {
+                if (!isMobile && (isEscapeMode || isMurderMode) && !isCelebration) document.body.requestPointerLock();
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (isMobile || (!isEscapeMode && !isMurderMode) || isCelebration || document.pointerLockElement !== document.body) return;
+                yaw -= e.movementX * 0.0025; pitch -= e.movementY * 0.0025;
+                pitch = Math.max(-Math.PI / 3, Math.min(Math.PI / 3, pitch));
+            });
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            if (!isEscapeMode && !isCityMode && !isCinematicMode && !isMurderMode) {
+                if (currentCar) {
+                    if (isCarInZone) {
+                        if (currentCar.position.z < 0) currentCar.position.z += carSpeed;
+                    } else {
+                        currentCar.position.z += carSpeed * 2.2;
+                        if (currentCar.position.z > 30) spawnCar();
+                    }
+                }
+            } else if ((isEscapeMode || isMurderMode) && !isCityMode && !isCinematicMode) {
+                const euler = new THREE.Euler(pitch, yaw, 0, 'YXZ'); camera.quaternion.setFromEuler(euler);
+                if (!isHidden) {
+                    const speed = 0.1; const dir = new THREE.Vector3();
+                    if (moveForward) dir.z -= 1; if (moveBackward) dir.z += 1;
+                    if (moveLeft) dir.x -= 1; if (moveRight) dir.x += 1;
+                    dir.normalize(); dir.applyQuaternion(camera.quaternion); dir.y = 0;
+                    camera.position.addScaledVector(dir, speed);
+                }
+            } else if (isCityMode) {
+                if (playerCarGroup) {
+                    if (moveForward) carSpeedDrive = Math.min(carSpeedDrive + 0.015, 0.5);
+                    else if (moveBackward) carSpeedDrive = Math.max(carSpeedDrive - 0.015, -0.2);
+                    else carSpeedDrive *= 0.95;
+
+                    const turnMultiplier = isDrifting ? 0.09 : 0.04;
+                    if (moveLeft) carAngleDrive += turnMultiplier; if (moveRight) carAngleDrive -= turnMultiplier;
+
+                    playerCarGroup.rotation.y = carAngleDrive; playerCarGroup.translateZ(-carSpeedDrive);
+                    camera.position.x = playerCarGroup.position.x; camera.position.z = playerCarGroup.position.z + 14; camera.position.y = 22;
+                    camera.lookAt(playerCarGroup.position);
+
+                    cityPedestrians.forEach(p => {
+                        if (p.visible && playerCarGroup.position.distanceTo(p.position) < 3.0) {
+                            p.visible = false; killsCount++;
+                            document.getElementById('kill-count').innerText = killsCount;
+                            if (killsCount >= 10) startSofaCinematic();
+                        }
+                    });
+                }
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function startGame(character, mode) {
+            selectedCharacter = character; currentGameMode = mode;
+            document.getElementById('character-select').style.display = 'none';
+
+            initTextures(); AudioSys.init(); init3D();
+
+            if (mode === 'murder') startMurderMysteryMode();
+            else {
+                document.getElementById('ui-layer').style.display = 'flex';
+                setupCharacters(); spawnCar();
+            }
+            animate();
+        }
+    </script>
+</body>
+</html>
